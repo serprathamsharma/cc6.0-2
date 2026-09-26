@@ -29,7 +29,10 @@ function createDatabase() {
       });
       return drizzlePg(pool, { schema });
     } catch (err) {
-      console.warn("[DB] Remote Postgres connection failed, falling back to embedded PGlite:", err);
+      console.warn(
+        "[DB] Remote Postgres connection failed, falling back to embedded PGlite:",
+        err
+      );
     }
   }
 
@@ -48,5 +51,20 @@ function createDatabase() {
   return drizzlePglite(pglite, { schema });
 }
 
-export const db = (globalThis.__dbInstance ??= createDatabase());
-export type Database = typeof db;
+export function getDb() {
+  if (!globalThis.__dbInstance) {
+    globalThis.__dbInstance = createDatabase();
+  }
+  return globalThis.__dbInstance;
+}
+
+// Lazy Proxy to prevent multiple Next.js static build workers from colliding on file locks
+export const db = new Proxy({} as any, {
+  get(_target, prop) {
+    const instance = getDb();
+    const value = instance[prop];
+    return typeof value === "function" ? value.bind(instance) : value;
+  },
+});
+
+export type Database = ReturnType<typeof createDatabase>;

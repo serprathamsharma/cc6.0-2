@@ -5,8 +5,9 @@
 - Clerk Organizations feature is used for RBAC (admin, field_officer, reviewer, viewer).
 
 ## Database
-- Local development uses Docker Postgres 16 with pgvector extension.
-- If Docker is unavailable, the app will fail with a clear error and instructions to start Docker.
+- Production and remote environments use PostgreSQL 16 with pgvector extension via DATABASE_URL or Neon.
+- Local environments and containerless setups automatically fall back to embedded persistent PGlite (`@electric-sql/pglite` with `@electric-sql/pglite-pgvector`) stored at `./.data/impactlens.db` for instant, zero-dependency execution without requiring Docker.
+- Lazy Proxy singleton prevents multi-worker file lock collisions during Next.js static page generation.
 
 ## Cloudinary
 - An upload preset named `impactlens_signed` will be created if it doesn't exist.

@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { sha256 } from "js-sha256";
 
 export interface LedgerEntryData {
   assetId: string;
@@ -16,6 +16,26 @@ export interface LedgerEntryData {
 }
 
 /**
+ * Recursive deterministic canonical JSON stringifier that sorts keys at all depths.
+ */
+export function canonicalStringify(obj: any): string {
+  if (obj === null || obj === undefined) {
+    return "null";
+  }
+  if (typeof obj !== "object") {
+    return JSON.stringify(obj);
+  }
+  if (Array.isArray(obj)) {
+    return "[" + obj.map(canonicalStringify).join(",") + "]";
+  }
+  const keys = Object.keys(obj).sort();
+  const pairs = keys
+    .filter((k) => obj[k] !== undefined && obj[k] !== null)
+    .map((k) => JSON.stringify(k) + ":" + canonicalStringify(obj[k]));
+  return "{" + pairs.join(",") + "}";
+}
+
+/**
  * Compute a deterministic hash for a ledger entry.
  * entry_hash = SHA-256(previousHash + canonicalJSON(entry))
  */
@@ -28,17 +48,15 @@ export function computeEntryHash(
       ? entry.generatedAt.toISOString()
       : String(entry.generatedAt);
   const normalized = { ...entry, generatedAt: normDate };
-  const canonical = JSON.stringify(normalized, Object.keys(normalized).sort());
+  const canonical = canonicalStringify(normalized);
   const input = previousHash + canonical;
-  return createHash("sha256").update(input).digest("hex");
+  return sha256(input);
 }
 
 /**
  * The genesis hash for the first entry in a chain.
  */
-export const GENESIS_HASH = createHash("sha256")
-  .update("impactlens-genesis")
-  .digest("hex");
+export const GENESIS_HASH = sha256("impactlens-genesis");
 
 export interface LedgerEntry extends LedgerEntryData {
   id: string;

@@ -72,6 +72,12 @@ export const assetEmbed = inngest.createFunction(
       });
     });
 
+    // Step 5: Dispatch clustering
+    await step.sendEvent("dispatch-cluster", {
+      name: "asset.cluster",
+      data: { assetId },
+    });
+
     return { assetId, status: "embedded" };
   }
 );

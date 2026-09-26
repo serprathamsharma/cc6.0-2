@@ -8,206 +8,279 @@ import {
   Languages,
   Link2,
   Sparkles,
+  Share2,
+  Download,
+  Copy,
+  Check,
+  CheckCircle2,
+  Layers,
+  ShieldCheck,
+  Crop,
 } from "lucide-react";
 
-function LinkedinIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
-      <rect x="2" y="9" width="4" height="12" />
-      <circle cx="4" cy="4" r="2" />
-    </svg>
-  );
+interface CampaignItem {
+  id: string;
+  platform: "linkedin" | "instagram" | "x";
+  project: string;
+  headline: string;
+  bodyEn: string;
+  bodyHi: string;
+  status: "published" | "draft" | "scheduled";
+  aspectRatios: ("1:1" | "4:5" | "9:16")[];
+  sourceEvidenceIds: string[];
+  derivativeImageUrl: string;
+  isAiDerived: boolean;
 }
 
-function InstagramIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-    </svg>
-  );
-}
-
-const DEMO_CAMPAIGNS = [
+const DEMO_CAMPAIGNS: CampaignItem[] = [
   {
-    id: "c-1",
+    id: "camp-01",
     platform: "linkedin",
-    project: "Maharashtra Tree Plantation",
-    headline: "🌱 1,000 Saplings Planted in Maharashtra's Western Ghats",
-    body: "Our team has planted over 1,000 native saplings across 3 sites in the Western Ghats region. Each planting site is GPS-verified, and every sapling is tracked in our evidence system...",
-    language: "en",
-    status: "draft",
-    generatedAssets: 4,
-    sourceEvidence: 8,
+    project: "Maharashtra Reforestation Initiative",
+    headline: "🌱 1,250 Native Saplings: +38.4% Canopy Increase in Sahyadri",
+    bodyEn:
+      "Real restoration requires audited ground truth. Over 14 months, our field teams planted 1,250 native saplings in Satara district, achieving an 88.4% survival rate. Computer vision analysis via Excess Green Index (ExG) confirms a +38.4 percentage point canopy expansion.\n\nEvery claim in this update is anchored to tamper-evident SHA-256 Cloudinary evidence.\n\n#ClimateAction #Restoration #SDG15 #OpenImpact",
+    bodyHi:
+      "सच्चे पर्यावरणीय सुधार के लिए प्रमाणित ज़मीनी साक्ष्य आवश्यक हैं। 14 महीनों में हमारी टीम ने सतारा जिले में 1,250 देशी पौधे लगाए, जिनमें 88.4% जीवित रहने की दर दर्ज की गई। अतिरिक्त हरित सूचकांक (ExG) के कंप्यूटर विज़न विश्लेषण से हरियाली आवरण में +38.4% की वृद्धि प्रमाणित हुई है।\n\n#पर्यावरण #वृक्षारोपण #जलवायुपरिवर्तन",
+    status: "published",
+    aspectRatios: ["1:1", "4:5"],
+    sourceEvidenceIds: ["demo-1"],
+    derivativeImageUrl: "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800",
+    isAiDerived: true,
   },
   {
-    id: "c-2",
+    id: "camp-02",
     platform: "instagram",
-    project: "Bellandur Lake Cleanup",
-    headline: "Before vs After: Bellandur Lake Transformation",
-    body: "Swipe to see the incredible transformation at Bellandur Lake! Our volunteers have removed over 2 tonnes of plastic waste and restored natural vegetation along the bank...",
-    language: "en",
+    project: "Bellandur Wetland Cleanup",
+    headline: "Swipe to see 2.5 Tonnes of Plastic Cleared from Bellandur Lake",
+    bodyEn:
+      "From choked inlet to restored open water. Our community partners removed over 2.5 tonnes of solid waste and deployed floating containment barriers. Check the before/after slider in our bio to inspect raw GPS evidence.\n\n#BellandurLake #WaterCleanUp #SDG6 #CommunityAction",
+    bodyHi:
+      "बेलंदूर झील के पुनरुद्धार की प्रेरणादायक यात्रा! हमारे सहयोगियों ने 2.5 टन से अधिक कचरा हटाया और खुले जल प्रवाह को पुनर्स्थापित किया। हमारे बायो में दिए लिंक से मूल जीपीएस साक्ष्य देखें।\n\n#स्वच्छजल #पर्यावरणसंरक्षण",
     status: "draft",
-    generatedAssets: 6,
-    sourceEvidence: 12,
+    aspectRatios: ["1:1", "4:5", "9:16"],
+    sourceEvidenceIds: ["demo-2"],
+    derivativeImageUrl: "https://images.unsplash.com/photo-1621451537084-482c73073a0f?w=800",
+    isAiDerived: true,
   },
 ];
 
-const platformIcons: Record<string, React.ComponentType<any>> = {
-  linkedin: LinkedinIcon,
-  instagram: InstagramIcon,
-};
-
 export default function CampaignsPage() {
-  const [showCreate, setShowCreate] = useState(false);
+  const [campaigns, setCampaigns] = useState<CampaignItem[]>(DEMO_CAMPAIGNS);
+  const [selectedLang, setSelectedLang] = useState<Record<string, "en" | "hi">>({
+    "camp-01": "en",
+    "camp-02": "en",
+  });
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedAspect, setSelectedAspect] = useState<Record<string, "1:1" | "4:5" | "9:16">>({
+    "camp-01": "1:1",
+    "camp-02": "4:5",
+  });
+
+  const handleCopy = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const getAspectClass = (aspect: "1:1" | "4:5" | "9:16") => {
+    switch (aspect) {
+      case "1:1":
+        return "aspect-square max-w-[280px]";
+      case "4:5":
+        return "aspect-[4/5] max-w-[240px]";
+      case "9:16":
+        return "aspect-[9/16] max-w-[200px]";
+    }
+  };
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">
-            Campaign Studio
+          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            Story & Campaign Studio
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+              Bilingual & Smart Crop
+            </span>
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Generate campaign-ready content from verified evidence
+            Turn verified ground evidence into campaign-ready stories for LinkedIn, Instagram & X with bilingual English/Hindi copy
           </p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-medium shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all hover:scale-[1.02]"
-        >
+
+        <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-semibold shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all hover:scale-[1.02]">
           <Plus className="w-4 h-4" />
-          New Campaign
+          Create New Campaign
         </button>
       </div>
 
-      {/* Campaigns list */}
-      <div className="space-y-4">
-        {DEMO_CAMPAIGNS.map((campaign) => {
-          const PlatformIcon = platformIcons[campaign.platform] || Megaphone;
+      {/* Campaign Cards */}
+      <div className="space-y-6">
+        {campaigns.map((camp) => {
+          const currentLang = selectedLang[camp.id] || "en";
+          const currentAspect = selectedAspect[camp.id] || "1:1";
+          const bodyText = currentLang === "en" ? camp.bodyEn : camp.bodyHi;
+
           return (
             <div
-              key={campaign.id}
-              className="rounded-xl border border-white/5 bg-slate-800/50 backdrop-blur-sm overflow-hidden hover:border-white/10 transition-all"
+              key={camp.id}
+              className="p-6 rounded-3xl bg-slate-900/80 border border-white/10 shadow-xl backdrop-blur-xl space-y-5"
             >
-              <div className="p-5">
-                <div className="flex items-start gap-4">
-                  <div className="p-2.5 rounded-xl bg-slate-900/50 border border-white/5">
-                    <PlatformIcon className="w-5 h-5 text-emerald-400" />
+              {/* Campaign Card Header */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-white/5 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-xs uppercase">
+                    {camp.platform}
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-sm font-semibold text-white">
-                        {campaign.headline}
-                      </h3>
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-medium bg-amber-500/10 text-amber-400">
-                        {campaign.status}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-400 mb-3 line-clamp-2">
-                      {campaign.body}
-                    </p>
-                    <div className="flex items-center gap-4 text-[10px] text-slate-500">
-                      <span className="capitalize">{campaign.platform}</span>
-                      <span className="flex items-center gap-1">
-                        <Languages className="w-3 h-3" />
-                        {campaign.language === "en" ? "English" : "Hindi"}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <ImageIcon className="w-3 h-3" />
-                        {campaign.generatedAssets} assets generated
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Link2 className="w-3 h-3" />
-                        {campaign.sourceEvidence} source evidence
-                      </span>
+                  <div>
+                    <h3 className="text-base font-semibold text-white">
+                      {camp.headline}
+                    </h3>
+                    <p className="text-xs text-slate-400">{camp.project}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {/* Language Toggle */}
+                  <div className="flex items-center p-1 rounded-xl bg-slate-800/80 border border-white/5 text-xs">
+                    <button
+                      onClick={() =>
+                        setSelectedLang((prev) => ({ ...prev, [camp.id]: "en" }))
+                      }
+                      className={`px-2.5 py-1 rounded-lg transition-all ${
+                        currentLang === "en"
+                          ? "bg-emerald-500 text-white font-medium shadow-sm"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      English
+                    </button>
+                    <button
+                      onClick={() =>
+                        setSelectedLang((prev) => ({ ...prev, [camp.id]: "hi" }))
+                      }
+                      className={`px-2.5 py-1 rounded-lg transition-all ${
+                        currentLang === "hi"
+                          ? "bg-emerald-500 text-white font-medium shadow-sm"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      हिन्दी (Hindi)
+                    </button>
+                  </div>
+
+                  <span
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase ${
+                      camp.status === "published"
+                        ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"
+                        : "bg-amber-500/10 text-amber-300 border border-amber-500/20"
+                    }`}
+                  >
+                    {camp.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Main Content Area: Copy & Derivative Smart Crop Preview */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                {/* Left: Generated Copy */}
+                <div className="space-y-4">
+                  <div className="relative p-4 rounded-2xl bg-slate-950/60 border border-white/5 font-sans text-xs text-slate-200 leading-relaxed whitespace-pre-line">
+                    {bodyText}
+                    <button
+                      onClick={() => handleCopy(camp.id, bodyText)}
+                      className="absolute top-3 right-3 p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all flex items-center gap-1 text-[11px]"
+                      title="Copy text"
+                    >
+                      {copiedId === camp.id ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" /> Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" /> Copy
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Evidence Traceability Badge */}
+                  <div className="p-3.5 rounded-xl bg-slate-800/40 border border-white/5 flex items-center justify-between text-xs">
+                    <span className="text-slate-400 flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      Anchored Evidence:
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {camp.sourceEvidenceIds.map((id) => (
+                        <span
+                          key={id}
+                          className="px-2 py-0.5 rounded font-mono text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                        >
+                          #{id}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 </div>
 
-                {/* Preview cards */}
-                <div className="grid grid-cols-4 gap-2 mt-4">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="aspect-square rounded-lg bg-slate-900/50 border border-white/5 flex items-center justify-center text-slate-700 relative overflow-hidden"
-                    >
-                      <ImageIcon className="w-6 h-6" />
-                      <div className="absolute bottom-1 left-1">
-                        <span className="px-1 py-0.5 rounded text-[7px] font-medium bg-purple-500/20 text-purple-400">
-                          AI-generated
-                        </span>
-                      </div>
+                {/* Right: Cloudinary Smart Crop Derivative Preview */}
+                <div className="space-y-3 flex flex-col items-center">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
+                    <Crop className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Cloudinary Smart Crop Aspect Ratio:</span>
+                    <div className="flex items-center p-0.5 rounded-lg bg-slate-800 border border-white/5 text-[11px]">
+                      {(["1:1", "4:5", "9:16"] as const).map((aspect) => (
+                        <button
+                          key={aspect}
+                          onClick={() =>
+                            setSelectedAspect((prev) => ({
+                              ...prev,
+                              [camp.id]: aspect,
+                            }))
+                          }
+                          className={`px-2 py-0.5 rounded-md transition-all ${
+                            currentAspect === aspect
+                              ? "bg-emerald-500 text-white font-medium"
+                              : "text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          {aspect}
+                        </button>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Cropped Image Container */}
+                  <div
+                    className={`relative rounded-2xl overflow-hidden border border-white/10 bg-slate-950 shadow-2xl transition-all duration-300 ${getAspectClass(
+                      currentAspect
+                    )}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={camp.derivativeImageUrl}
+                      alt="Campaign Creative"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-2.5 left-2.5">
+                      <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-black/75 backdrop-blur-md text-amber-300 border border-amber-500/30">
+                        AI-Generated Derivative
+                      </span>
+                    </div>
+                    <div className="absolute bottom-2.5 right-2.5">
+                      <span className="px-2 py-0.5 rounded-md text-[9px] font-mono bg-black/75 backdrop-blur-md text-emerald-400 border border-emerald-500/30">
+                        Smart Crop {currentAspect}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           );
         })}
       </div>
-
-      {/* Create modal */}
-      {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="w-full max-w-md mx-4 rounded-2xl bg-slate-900 border border-white/10 p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-4">
-              <Sparkles className="w-5 h-5 inline mr-2 text-emerald-400" />
-              Create Campaign
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs text-slate-400 block mb-1.5">Project</label>
-                <select className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-sm text-white">
-                  <option>Maharashtra Tree Plantation</option>
-                  <option>Bellandur Lake Cleanup</option>
-                  <option>Rajasthan School Water</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-slate-400 block mb-1.5">Platform</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {["LinkedIn", "Instagram", "X"].map((p) => (
-                    <button
-                      key={p}
-                      className="px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-sm text-slate-400 hover:text-white hover:border-emerald-500/30 transition-all"
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="text-xs text-slate-400 block mb-1.5">Language</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {["English", "Hindi"].map((l) => (
-                    <button
-                      key={l}
-                      className="px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-sm text-slate-400 hover:text-white hover:border-emerald-500/30 transition-all"
-                    >
-                      {l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowCreate(false)}
-                className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors"
-              >
-                Cancel
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 transition-colors">
-                <Sparkles className="w-4 h-4" />
-                Generate
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
