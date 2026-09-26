@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: impactlens
+      POSTGRES_USER: impactlens
+      POSTGRES_PASSWORD: impactlens_dev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U impactlens"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  inngest:
+    image: inngest/inngest:latest
+    ports:
+      - "8288:8288"
+    command: inngest dev -u http://host.docker.internal:3000/api/inngest
+
+volumes:
+  pgdata:
