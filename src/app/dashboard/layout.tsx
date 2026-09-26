@@ -16,6 +16,7 @@ import {
   Leaf,
 } from "lucide-react";
 import { useState } from "react";
+import { ToastProvider } from "@/components/ui/toast";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -137,7 +138,9 @@ export default function DashboardLayout({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8">{children}</main>
+        <ToastProvider>
+          <main className="flex-1 overflow-y-auto p-4 lg:p-8">{children}</main>
+        </ToastProvider>
       </div>
     </div>
   );

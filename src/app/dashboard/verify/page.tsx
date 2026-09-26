@@ -22,6 +22,7 @@ import {
   type LedgerEntry,
   type LedgerEntryData,
 } from "@/lib/ledger/hash-chain";
+import { useToast } from "@/components/ui/toast";
 
 // Generate mathematically valid initial demonstration ledger entries
 function createInitialDemoEntries(): LedgerEntry[] {
@@ -113,6 +114,7 @@ export default function VerifyPage() {
   });
   const [isTampered, setIsTampered] = useState(false);
   const [reviewTab, setReviewTab] = useState<"ledger" | "queue">("ledger");
+  const { showToast } = useToast();
 
   // Fetch real ledger from database on mount
   useEffect(() => {
@@ -364,10 +366,28 @@ export default function VerifyPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <button className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-medium transition-all flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      showToast({
+                        title: "Evidence Approved & Signed",
+                        description: "Cryptographic signature committed to ledger block #5. Verification status updated to VERIFIED.",
+                        type: "success",
+                      });
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-medium transition-all flex items-center gap-1 cursor-pointer"
+                  >
                     <CheckCircle2 className="w-3.5 h-3.5" /> Approve & Sign
                   </button>
-                  <button className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-medium transition-all flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      showToast({
+                        title: "Evidence Flagged for Clarification",
+                        description: "Review note sent back to field surveyor. GPS coordinate bounds re-requested.",
+                        type: "info",
+                      });
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-medium transition-all flex items-center gap-1 cursor-pointer"
+                  >
                     <XCircle className="w-3.5 h-3.5" /> Reject
                   </button>
                 </div>

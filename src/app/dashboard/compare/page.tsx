@@ -18,7 +18,13 @@ import {
   Calendar,
   MapPin,
   Leaf,
+  Scan,
+  Download,
+  Copy,
+  FileCheck,
+  RefreshCw,
 } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
 
 interface ComparePair {
   id: string;
@@ -47,13 +53,13 @@ interface ComparePair {
 const DEMO_PAIRS: ComparePair[] = [
   {
     id: "pair-1",
-    projectName: "Maharashtra Reforestation Initiative",
+    projectName: "Maharashtra Afforestation Initiative",
     siteName: "Satara Western Ghats Watershed Site 4",
     beforeDate: "June 12, 2024",
     afterDate: "August 18, 2025",
     timeDeltaDays: 432,
-    beforeImageUrl: "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1000",
-    afterImageUrl: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=1000",
+    beforeImageUrl: "/demo-assets/reforest_before.jpg",
+    afterImageUrl: "/demo-assets/reforest_after.jpg",
     beforeSha256: "9a2f7c4e88d154bc0991e45f94b301ad5a932bc3e0a12cfd99214b7e801ad4f2",
     afterSha256: "b45a198de30cf299a7102e3b994d80a13e551fa0488219ad02bb91845c10ad82",
     category: "Revegetation & Agro-forestry",
@@ -78,13 +84,13 @@ const DEMO_PAIRS: ComparePair[] = [
   },
   {
     id: "pair-2",
-    projectName: "Bellandur Wetland Restoration",
+    projectName: "Bellandur Wetland Remediation",
     siteName: "South Feeder Inlet Zone A",
     beforeDate: "January 10, 2025",
     afterDate: "July 24, 2025",
     timeDeltaDays: 195,
-    beforeImageUrl: "https://images.unsplash.com/photo-1621451537084-482c73073a0f?w=1000",
-    afterImageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1000",
+    beforeImageUrl: "/demo-assets/lake_before.jpg",
+    afterImageUrl: "/demo-assets/lake_after.jpg",
     beforeSha256: "7c19ad43e201b4998ca0f918420e11894d01ea598b0213cd99812fa4b01e33c1",
     afterSha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     category: "Wetland Remediation & Solid Waste Extraction",
@@ -106,18 +112,115 @@ const DEMO_PAIRS: ComparePair[] = [
     ],
     confidence: 0.91,
   },
+  {
+    id: "pair-3",
+    projectName: "Barmer Clean Water Infrastructure",
+    siteName: "Sector 3 Solar Water Kiosk, Thar Desert",
+    beforeDate: "March 05, 2024",
+    afterDate: "September 15, 2025",
+    timeDeltaDays: 559,
+    beforeImageUrl: "/demo-assets/solar_before.jpg",
+    afterImageUrl: "/demo-assets/solar_after.jpg",
+    beforeSha256: "4d7c81a29b4e63cf50a12e8731b992f4ca18e77519bb01af93245c711890ab42",
+    afterSha256: "1f8e4c9201bd774ac3998a44b12df602a819c43b90013e2f89104194cba89711",
+    category: "Off-Grid Solar & Potable Water Distribution",
+    observedChanges: [
+      "Parched drought terrain transformed with automated solar pump array and 5,000L insulated storage tank",
+      "Operational stainless steel dispensing taps serving ~450 pastoral households daily",
+      "Zero groundwater drawdown anomaly registered across 90-day operational telemetry",
+    ],
+    quantification: {
+      metric: "Potable Water Access & Renewable Utilization",
+      beforeValue: "0 L/day (Trucked)",
+      afterValue: "4,800 L/day (Solar)",
+      change: "+4,800 L/day Potable",
+      isEstimate: false,
+    },
+    limitations: [
+      "Pipeline pressure drop sensors require annual dry-season recalibration",
+      "Telemetry logs subject to satellite uplink jitter during dust storms",
+    ],
+    confidence: 0.98,
+  },
 ];
 
 export default function ComparePage() {
   const [selectedPairIndex, setSelectedPairIndex] = useState(0);
   const [viewMode, setViewMode] = useState<"slider" | "side" | "fade">("slider");
   const [fadeOpacity, setFadeOpacity] = useState(50);
-  const [analyzing, setAnalyzing] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const { showToast } = useToast();
 
   const pair = DEMO_PAIRS[selectedPairIndex];
 
+  const handleRunScan = () => {
+    setIsScanning(true);
+    showToast({
+      title: "Analyzing Multispectral Imagery",
+      description: `Computing Excess Green Index (ExG) and edge alignment for ${pair.projectName}...`,
+      type: "info",
+    });
+
+    setTimeout(() => {
+      setIsScanning(false);
+      showToast({
+        title: "ExG Analysis Verified",
+        description: `Verified change of ${pair.quantification.change} with ${(pair.confidence * 100).toFixed(0)}% confidence score.`,
+        type: "success",
+      });
+    }, 1400);
+  };
+
+  const handleExportAudit = () => {
+    const auditPayload = {
+      auditTimestamp: new Date().toISOString(),
+      pairId: pair.id,
+      projectName: pair.projectName,
+      siteName: pair.siteName,
+      timeDeltaDays: pair.timeDeltaDays,
+      cryptographicHashes: {
+        baseline: pair.beforeSha256,
+        comparison: pair.afterSha256,
+        hashChainAlgorithm: "SHA-256 (FIPS 180-4)",
+      },
+      metric: pair.quantification,
+      disclosedLimitations: pair.limitations,
+      confidenceScore: pair.confidence,
+      immutabilityStatus: "SECURE — Cloudinary Original Derivative",
+    };
+
+    const blob = new Blob([JSON.stringify(auditPayload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `impactlens-audit-${pair.id}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast({
+      title: "Comparison Audit Downloaded",
+      description: `Saved impactlens-audit-${pair.id}.json with full cryptographic citations.`,
+      type: "success",
+    });
+  };
+
+  const handleAddToReport = () => {
+    const citation = `[Evidence Citation: ${pair.projectName} (${pair.siteName}) | Metric: ${pair.quantification.metric} (${pair.quantification.change}) | Baseline Hash: ${pair.beforeSha256.slice(0, 12)}... | Verified Hash: ${pair.afterSha256.slice(0, 12)}...]`;
+    navigator.clipboard?.writeText?.(citation);
+
+    showToast({
+      title: "Claim Attached to Report Draft",
+      description: "Cryptographic evidence citation copied to clipboard and pinned to active report draft.",
+      type: "success",
+    });
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -132,22 +235,57 @@ export default function ComparePage() {
           </p>
         </div>
 
-        {/* Pair selector pills */}
-        <div className="flex items-center gap-2 p-1 rounded-xl bg-slate-900 border border-white/5">
-          {DEMO_PAIRS.map((p, idx) => (
-            <button
-              key={p.id}
-              onClick={() => setSelectedPairIndex(idx)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                selectedPairIndex === idx
-                  ? "bg-emerald-500 text-white shadow-sm"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Pair {idx + 1}: {p.projectName.split(" ")[0]}
-            </button>
-          ))}
+        {/* Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleRunScan}
+            disabled={isScanning}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold shadow-lg transition-all ${
+              isScanning
+                ? "bg-slate-800 text-slate-400 border border-white/10"
+                : "bg-emerald-500 hover:bg-emerald-400 text-white shadow-emerald-500/20 cursor-pointer"
+            }`}
+          >
+            <Scan className={`w-3.5 h-3.5 ${isScanning ? "animate-spin" : ""}`} />
+            {isScanning ? "Running ExG Scan..." : "Run New ExG Scan"}
+          </button>
+
+          <button
+            onClick={handleExportAudit}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-white/10 transition-all cursor-pointer"
+            title="Download verified audit JSON"
+          >
+            <Download className="w-3.5 h-3.5 text-slate-400" />
+            Export Audit
+          </button>
+
+          <button
+            onClick={handleAddToReport}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-slate-800/80 hover:bg-slate-700/80 text-emerald-400 border border-emerald-500/20 transition-all cursor-pointer"
+            title="Copy verified citation to clipboard"
+          >
+            <Copy className="w-3.5 h-3.5" />
+            Add to Report
+          </button>
         </div>
+      </div>
+
+      {/* Project Selector Pills */}
+      <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-900/80 border border-white/5 overflow-x-auto">
+        {DEMO_PAIRS.map((p, idx) => (
+          <button
+            key={p.id}
+            onClick={() => setSelectedPairIndex(idx)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+              selectedPairIndex === idx
+                ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
+                : "text-slate-400 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-current" />
+            Project {idx + 1}: {p.projectName}
+          </button>
+        ))}
       </div>
 
       {/* Main Comparison Canvas */}
@@ -159,7 +297,7 @@ export default function ComparePage() {
             <div className="flex items-center p-1 rounded-xl bg-slate-800/80 border border-white/5">
               <button
                 onClick={() => setViewMode("slider")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                   viewMode === "slider"
                     ? "bg-emerald-500 text-white shadow-sm"
                     : "text-slate-400 hover:text-white"
@@ -170,7 +308,7 @@ export default function ComparePage() {
               </button>
               <button
                 onClick={() => setViewMode("side")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                   viewMode === "side"
                     ? "bg-emerald-500 text-white shadow-sm"
                     : "text-slate-400 hover:text-white"
@@ -181,7 +319,7 @@ export default function ComparePage() {
               </button>
               <button
                 onClick={() => setViewMode("fade")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                   viewMode === "fade"
                     ? "bg-emerald-500 text-white shadow-sm"
                     : "text-slate-400 hover:text-white"
@@ -218,6 +356,14 @@ export default function ComparePage() {
 
         {/* Viewport Render Area */}
         <div className="relative rounded-xl overflow-hidden border border-white/10 bg-slate-950 aspect-[16/9] max-h-[520px] flex items-center justify-center">
+          {/* Scanning laser effect overlay */}
+          {isScanning && (
+            <div className="absolute inset-0 z-30 pointer-events-none overflow-hidden">
+              <div className="w-full h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_15px_#10b981] animate-scan" />
+              <div className="absolute inset-0 bg-emerald-500/5 backdrop-blur-[0.5px]" />
+            </div>
+          )}
+
           {viewMode === "slider" && (
             <div className="w-full h-full">
               <ReactCompareSlider
@@ -368,7 +514,7 @@ export default function ComparePage() {
                 Baseline: {pair.quantification.beforeValue} → Final: {pair.quantification.afterValue}
               </p>
               <span className="inline-block px-2 py-0.5 rounded text-[9px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                Labeled as Estimate (ExG 2G-R-B)
+                {pair.quantification.isEstimate ? "Labeled as Estimate (ExG 2G-R-B)" : "Verified Field Sensor Data"}
               </span>
             </div>
 

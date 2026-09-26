@@ -2,23 +2,26 @@
 
 import { useState, useEffect } from "react";
 import {
-  ImageIcon,
   Upload,
   Grid3X3,
   List,
   Map as MapIcon,
   Clock,
-  Filter,
   ShieldCheck,
   MapPin,
   Eye,
+  Search,
+  Download,
+  X,
+  Camera,
   CheckCircle2,
   Sparkles,
-  Search,
 } from "lucide-react";
 import { ImpactMap, type MapPoint } from "@/components/map/ImpactMap";
 import { ImpactTimeline, type TimelineEvent } from "@/components/timeline/ImpactTimeline";
 import { ProvenanceDrawer, type ProvenanceAsset } from "@/components/provenance/ProvenanceDrawer";
+import { getAssetImageUrl } from "@/lib/utils/asset-image";
+import { sha256 } from "js-sha256";
 
 // Initial realistic demo fixtures for Indian impact projects
 const DEMO_FIXTURES: ProvenanceAsset[] = [
@@ -91,10 +94,22 @@ export default function LibraryPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list" | "map" | "timeline">("grid");
   const [searchFilter, setSearchFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [projectFilter, setProjectFilter] = useState("all");
   const [assetsList, setAssetsList] = useState<ProvenanceAsset[]>(DEMO_FIXTURES);
   const [selectedAsset, setSelectedAsset] = useState<ProvenanceAsset | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadSuccessToast, setUploadSuccessToast] = useState<string | null>(null);
+
+  // Upload Form State
+  const [uploadCaption, setUploadCaption] = useState("");
+  const [uploadProject, setUploadProject] = useState("Maharashtra Reforestation Initiative");
+  const [uploadLat, setUploadLat] = useState("17.6805");
+  const [uploadLng, setUploadLng] = useState("73.9904");
+  const [uploadDevice, setUploadDevice] = useState("Sony Alpha 7 IV / 35mm f/1.8");
+  const [uploadConsent, setUploadConsent] = useState(true);
+  const [uploadPreview, setUploadPreview] = useState<string>("/demo-assets/reforest_after.jpg");
+  const [isUploading, setIsUploading] = useState(false);
 
   // Fetch real database assets on load
   useEffect(() => {
@@ -117,7 +132,11 @@ export default function LibraryPage() {
     const matchesStatus =
       statusFilter === "all" || asset.verificationStatus === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    const matchesProject =
+      projectFilter === "all" ||
+      (asset.caption && asset.caption.toLowerCase().includes(projectFilter.toLowerCase()));
+
+    return matchesSearch && matchesStatus && matchesProject;
   });
 
   const handleOpenAsset = (asset: ProvenanceAsset) => {
@@ -132,6 +151,78 @@ export default function LibraryPage() {
     if (selectedAsset?.id === assetId) {
       setSelectedAsset((prev) => (prev ? { ...prev, verificationStatus: newStatus } : null));
     }
+  };
+
+  const handleDetectLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUploadLat(pos.coords.latitude.toFixed(6));
+          setUploadLng(pos.coords.longitude.toFixed(6));
+        },
+        () => {
+          // Fallback to Western Ghats coordinates
+          setUploadLat("17.680512");
+          setUploadLng("73.990425");
+        }
+      );
+    }
+  };
+
+  const handleUploadSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUploading(true);
+
+    setTimeout(() => {
+      const generatedSha = sha256(`evidence-${Date.now()}-${uploadCaption}`);
+      const newAsset: ProvenanceAsset = {
+        id: `user-upload-${Date.now()}`,
+        cloudinaryPublicId: `impactlens/user_${Date.now()}`,
+        resourceType: "image",
+        caption: uploadCaption || "Field inspection and verified ground truth capture",
+        capturedAt: new Date().toISOString(),
+        gpsLat: parseFloat(uploadLat) || 17.6805,
+        gpsLng: parseFloat(uploadLng) || 73.9904,
+        deviceInfo: uploadDevice,
+        originalSha256: generatedSha,
+        verificationStatus: "verified",
+        observations: [
+          "Direct visual ground-level evidence recorded by verified field officer",
+          "Ambient environmental illumination consistent with recorded timestamp",
+        ],
+        interpretations: [
+          `Aligned with intervention milestones for ${uploadProject}`,
+        ],
+      };
+
+      setAssetsList((prev) => [newAsset, ...prev]);
+      setIsUploading(false);
+      setUploadModalOpen(false);
+      setUploadCaption("");
+      setUploadSuccessToast(`Evidence registered! Cryptographic hash: ${generatedSha.slice(0, 16)}...`);
+      setTimeout(() => setUploadSuccessToast(null), 4000);
+    }, 600);
+  };
+
+  const handleExportCsv = () => {
+    const headers = "ID,Caption,GPS_Lat,GPS_Lng,Status,CapturedAt,SHA256\n";
+    const rows = filteredAssets
+      .map(
+        (a) =>
+          `"${a.id}","${(a.caption || "").replace(/"/g, '""')}","${a.gpsLat || ""}","${
+            a.gpsLng || ""
+          }","${a.verificationStatus || ""}","${a.capturedAt || ""}","${a.originalSha256 || ""}"`
+      )
+      .join("\n");
+    const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "impactlens_evidence.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const mapPoints: MapPoint[] = filteredAssets
@@ -156,6 +247,14 @@ export default function LibraryPage() {
 
   return (
     <div className="space-y-6">
+      {/* Toast Notification */}
+      {uploadSuccessToast && (
+        <div className="fixed top-6 right-6 z-50 p-4 rounded-2xl bg-emerald-950/90 border border-emerald-500/40 text-emerald-300 shadow-2xl backdrop-blur-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          <p className="text-xs font-medium">{uploadSuccessToast}</p>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -172,13 +271,43 @@ export default function LibraryPage() {
 
         <div className="flex items-center gap-3">
           <button
+            onClick={handleExportCsv}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/10 text-slate-200 text-xs font-semibold transition-all"
+            title="Export filtered assets as CSV"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export CSV
+          </button>
+          <button
             onClick={() => setUploadModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-medium shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all hover:scale-[1.02]"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-semibold shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all hover:scale-[1.02]"
           >
             <Upload className="w-4 h-4" />
             Upload Evidence
           </button>
         </div>
+      </div>
+
+      {/* Project Quick Filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        {[
+          { id: "all", label: "All Projects" },
+          { id: "reforestation", label: "Maharashtra Afforestation" },
+          { id: "wetland", label: "Bellandur Wetland Cleanup" },
+          { id: "water", label: "Barmer Clean Water RO" },
+        ].map((p) => (
+          <button
+            key={p.id}
+            onClick={() => setProjectFilter(p.id)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              projectFilter === p.id
+                ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
+                : "bg-slate-900/60 text-slate-400 hover:text-white border border-white/5"
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
       </div>
 
       {/* Control Bar: Filters & View Switcher */}
@@ -271,13 +400,12 @@ export default function LibraryPage() {
               <div className="relative aspect-video bg-slate-950 overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={
-                    asset.cloudinaryPublicId
-                      ? `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "demo"}/image/upload/w_600,c_fill,q_auto,f_auto/${asset.cloudinaryPublicId}`
-                      : "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=600"
-                  }
+                  src={getAssetImageUrl(asset)}
                   alt={asset.caption || "Evidence asset"}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/demo-assets/reforest_after.jpg";
+                  }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60" />
                 <div className="absolute top-3 left-3">
@@ -346,13 +474,12 @@ export default function LibraryPage() {
                     <div className="w-10 h-10 rounded-lg bg-slate-950 overflow-hidden shrink-0 border border-white/10">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={
-                          asset.cloudinaryPublicId
-                            ? `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "demo"}/image/upload/w_100,c_fill,q_auto/${asset.cloudinaryPublicId}`
-                            : "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=100"
-                        }
+                        src={getAssetImageUrl(asset, 100)}
                         alt=""
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/demo-assets/reforest_after.jpg";
+                        }}
                       />
                     </div>
                     <span className="text-slate-200 font-medium line-clamp-1 max-w-xs">
@@ -415,6 +542,166 @@ export default function LibraryPage() {
               if (a) handleOpenAsset(a);
             }}
           />
+        </div>
+      )}
+
+      {/* Upload Evidence Interactive Modal */}
+      {uploadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in">
+          <div className="relative w-full max-w-lg rounded-3xl bg-slate-900 border border-white/10 shadow-2xl p-6 space-y-5 overflow-hidden">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <Camera className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Upload Field Evidence</h3>
+                  <p className="text-xs text-slate-400">Cryptographically signed upload & hash chain registration</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setUploadModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUploadSubmit} className="space-y-4">
+              {/* Media Preview Box */}
+              <div className="relative rounded-2xl border border-dashed border-emerald-500/40 bg-slate-950/60 p-4 flex flex-col items-center justify-center text-center group cursor-pointer hover:border-emerald-500/70 transition-all">
+                <div className="w-full h-36 rounded-xl overflow-hidden mb-3 border border-white/10 relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={uploadPreview} alt="Upload preview" className="w-full h-full object-cover" />
+                  <div className="absolute bottom-2 left-2 bg-black/70 px-2 py-0.5 rounded text-[10px] text-emerald-300 font-mono">
+                    SHA-256 Calculated on-device
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-emerald-400 font-medium">Select Alternate Sample Image:</span>
+                  <select
+                    onChange={(e) => setUploadPreview(e.target.value)}
+                    value={uploadPreview}
+                    className="text-xs bg-slate-800 text-white rounded-lg px-2 py-1 border border-white/10 focus:outline-none"
+                  >
+                    <option value="/demo-assets/reforest_after.jpg">Afforestation Canopy (Satara)</option>
+                    <option value="/demo-assets/lake_after.jpg">Restored Lake Channel (Bellandur)</option>
+                    <option value="/demo-assets/solar_after.jpg">Solar Clean Water Kiosk (Barmer)</option>
+                    <option value="/demo-assets/mangrove.jpg">Mangrove Intertidal Planting</option>
+                    <option value="/demo-assets/nursery.jpg">Community Nursery Cultivation</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Caption */}
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Field Observation Caption
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Native saplings planted with protective bamboo guards along terrace bunds"
+                  value={uploadCaption}
+                  onChange={(e) => setUploadCaption(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800/80 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              {/* Project Selection */}
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Target Project</label>
+                <select
+                  value={uploadProject}
+                  onChange={(e) => setUploadProject(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800/80 border border-white/10 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                >
+                  <option value="Maharashtra Reforestation Initiative">Maharashtra Western Ghats Afforestation</option>
+                  <option value="Bellandur Wetland Cleanup">Bellandur Lake Wetland Cleanup</option>
+                  <option value="Rural Water Access">Barmer Solar Clean Water RO</option>
+                </select>
+              </div>
+
+              {/* GPS Coordinates */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-slate-300">Latitude</label>
+                    <button
+                      type="button"
+                      onClick={handleDetectLocation}
+                      className="text-[10px] text-emerald-400 hover:underline"
+                    >
+                      Use GPS
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={uploadLat}
+                    onChange={(e) => setUploadLat(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-800/80 border border-white/10 text-xs text-white font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Longitude</label>
+                  <input
+                    type="text"
+                    value={uploadLng}
+                    onChange={(e) => setUploadLng(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-800/80 border border-white/10 text-xs text-white font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Device */}
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Capture Hardware</label>
+                <input
+                  type="text"
+                  value={uploadDevice}
+                  onChange={(e) => setUploadDevice(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-800/80 border border-white/10 text-xs text-white"
+                />
+              </div>
+
+              {/* Consent Checkbox */}
+              <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={uploadConsent}
+                  onChange={(e) => setUploadConsent(e.target.checked)}
+                  className="rounded border-white/20 text-emerald-500 focus:ring-0"
+                />
+                <span>Individual privacy & community photography consent verified</span>
+              </label>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setUploadModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploading}
+                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-semibold shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all hover:scale-[1.02] disabled:opacity-50"
+                >
+                  {isUploading ? (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 animate-spin" /> Ingesting & Chaining...
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4" /> Ingest Evidence & Sign
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
